@@ -9,5 +9,3 @@ def prime_in_range(a,b):
             div += 1
         if isprime:
             print(i,"is prime")
-
-prime_in_range(10000,10050)
