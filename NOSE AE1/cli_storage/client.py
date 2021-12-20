@@ -3,10 +3,22 @@ import sys
 import os
 from useful import send_file, recv_file, send_listing, recv_listing
 
-### Argument Parser
+# FUNCTIONS
+
 def usage():
     print('Usage: <port> <put filename|get filename|list>')
     sys.exit(1)
+
+# a function which returns a result of the request process
+def processing_request(sock, func):
+    result = func
+    if (result == True):
+        raport = "Success"
+    else:
+        raport = "Failure "+ str(result)
+    return raport
+
+### Argument Parser
 
 accepted_commands = set(["put","get","list"])
 
@@ -19,17 +31,13 @@ try:
         usage()
     if comm != "list":
         filename = str(sys.argv[3])
-except IndexError:
-    print('Wrong Number of Arguments')
+except Exception as e:
+    print(e)
     usage()
 
-def result_meassage(result):
-    if ( result == True):
-        print("Sucess")
-    else:
-        print("Faliure", result)
-        
-### initislising the connection
+
+# Connecting to the server and sending a request
+
 try:
     cli_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     srv_address = ("0.0.0.0", port)
@@ -38,29 +46,23 @@ try:
 
     request_msg = comm +" "+ filename
     request = cli_sock.send(request_msg.encode())
-    
-    print("Initialising", comm, "request")
-    
+        
     while True:
         if comm == "put":
-            result_meassage(send_file(cli_sock, filename))
-            print("Closing connection with the server")
-            cli_sock.close()
-            break
+            result = processing_request(cli_sock, send_file(cli_sock, filename))
         elif comm == "get":
-            result_meassage(recv_file(cli_sock, filename))
-            print("Closing connection with the server")
-            cli_sock.close()
-            break
+            result = processing_request(cli_sock, recv_file(cli_sock, filename))
         elif comm == "list":
-            result_meassage(recv_listing(cli_sock))
-            print("Closing connection with the server")
-            cli_sock.close()
-            break
+            result = processing_request(cli_sock, recv_listing(cli_sock))
+
+        print(srv_address,"Request Type:", comm, ("Filename: "+filename) if filename != "0" else "", "Status:", result) 
+        break
     
 except Exception as e:
     print(e)
     usage()
+
+cli_sock.close()
 
 
 

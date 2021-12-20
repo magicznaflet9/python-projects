@@ -3,50 +3,45 @@ import sys
 import os
 from useful import send_file, recv_file, send_listing, recv_listing
 
-def processing_request(comm, fnc):
-    if ( fnc == True):
-        print("Success")
-        return True
+# a function which returns a raport on Success or Failure of the request process
+def processing_request(sock, func):
+    result = func
+    if result == True:
+        raport = "Success"
     else:
-        print("Failure",fnc)
-        return fnc
-    return
+        raport = "Failure: "+ result
+    return raport
+
+try:
+    srv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    srv_adress = ("0.0.0.0", int(sys.argv[1]))
+    srv_sock.bind(srv_adress)
+    print(srv_adress, "server up and running")
+    srv_sock.listen()
+except Exception as e:
+    print("Problem with connection",e)
     
-srv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    while True:
+        cli_sock, cli_adress = srv_sock.accept()
 
-srv_adress = ("0.0.0.0", int(sys.argv[1]))
-srv_sock.bind(srv_adress)
-print(srv_adress, "server up and running")
-srv_sock.listen()
-
-current_dir_path = os.getcwd()
-file_list = os.listdir(current_dir_path)
-
-while True:
-    cli_sock, cli_adress = srv_sock.accept()
-
-    request = cli_sock.recv(1048).decode()
-    print(" REQUEST ", request)
-    print(" REQUEST.SPLIT ", request.split())
-    comm = request.split()[0]
-    filename = request.split()[1]
-    
-    print("request recived: ", comm, filename if filename != "0" else "")
-
-    if comm == "put":
-        processing_request(comm, recv_file(cli_sock, filename))
+        request = cli_sock.recv(4086).decode()
+        comm = request.split()[0]           #comm = client command
+        filename = request.split()[1]
+        
+        if comm == "put":
+            result = processing_request(cli_sock, recv_file(cli_sock, filename))
+        elif comm == "get":
+            result = processing_request(cli_sock, send_file(cli_sock, filename))
+        elif comm == "list":
+            result = processing_request(cli_sock, send_listing(cli_sock))
+        
+        print(cli_adress, "Request Type:", comm,("Filename: "+filename) if filename != "0" else "", "Status:", result)
         cli_sock.close()
         break
-    elif comm == "get":
-        processing_request(comm, send_file(cli_sock, filename))
-        cli_sock.close()
-        break
-    elif comm == "list":
-        processing_request(comm, send_listing(cli_sock))
-        print("closing client socket")
-        cli_sock.close()
-        break
+except Exception as e:
+    print(e)
 
-print("Closing server socket")
 srv_sock.close()
     
